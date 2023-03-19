@@ -1,0 +1,398 @@
+C51 COMPILER V9.56.0.0   DHTC12                                                            12/22/2021 15:01:57 PAGE 1   
+
+
+C51 COMPILER V9.56.0.0, COMPILATION OF MODULE DHTC12
+OBJECT MODULE PLACED IN .\Objects\DHTC12.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE DHTC12.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\DH
+                    -TC12.lst) TABS(2) OBJECT(.\Objects\DHTC12.obj)
+
+line level    source
+
+   1          #include <STC8.H>
+   2          #include <intrins.h>
+   3          #include "DHTC12.H"
+   4          
+   5          
+   6          
+   7          
+   8          sbit SDA = P3^3;
+   9          sbit SCK = P3^2;
+  10          
+  11          #define V4_I2C_ADDR 0x44
+  12          #define ACK 0
+  13          #define NACK 1
+  14          
+  15          #define HDCSDA_CLR()    SDA = 0        
+  16          #define HDCSDA_SET()    SDA = 1
+  17          #define HDCSCK_CLR()    SCK = 0        
+  18          #define HDCSCK_SET()    SCK = 1
+  19          #define HDCGet_SDA()    SDA 
+  20          #define HDCSDA_Output()   _nop_()
+  21          #define HDCSDA_Input()   SDA = 1
+  22          
+  23          
+  24          
+  25          static u8 ACK_ret;
+  26          
+  27          
+  28          void Delay1us()   //@11.0592MHz
+  29          {
+  30   1        unsigned char i;
+  31   1      
+  32   1        _nop_();
+  33   1        _nop_();
+  34   1        i = 1;
+  35   1        while (--i);
+  36   1      }
+  37          
+  38          /*
+  39          void Delay5us()   //@11.0592MHz
+  40          {
+  41            unsigned char i;
+  42          
+  43            _nop_();
+  44            i = 16;
+  45            while (--i);
+  46          }
+  47          */
+  48          
+  49          void Delay10us()    //@11.0592MHz
+  50          {
+  51   1        unsigned char i;
+  52   1      
+  53   1        i = 35;
+  54   1        while (--i);
+C51 COMPILER V9.56.0.0   DHTC12                                                            12/22/2021 15:01:57 PAGE 2   
+
+  55   1      }
+  56          
+  57          
+  58          void Delay1ms()   //@11.0592MHz
+  59          {
+  60   1        unsigned char i, j;
+  61   1      
+  62   1        i = 15;
+  63   1        j = 90;
+  64   1        do
+  65   1        {
+  66   2          while (--j);
+  67   2        } while (--i);
+  68   1      }
+  69          
+  70          
+  71          void Delay2ms()   //@11.0592MHz
+  72          {
+  73   1        unsigned char i, j;
+  74   1      
+  75   1        i = 29;
+  76   1        j = 183;
+  77   1        do
+  78   1        {
+  79   2          while (--j);
+  80   2        } while (--i);
+  81   1      }
+  82          
+  83          
+  84          void start(void)
+  85          {
+  86   1        HDCSDA_SET();
+  87   1        Delay10us(); //IIC ?????? 0~100Hz
+  88   1        HDCSCK_SET();
+  89   1        Delay10us();
+  90   1        HDCSDA_CLR();
+  91   1        Delay10us();
+  92   1        HDCSCK_CLR();
+  93   1      }
+  94          
+  95          void stop(void)
+  96          {
+  97   1        HDCSDA_CLR();
+  98   1        Delay10us();
+  99   1        HDCSCK_SET();
+ 100   1        Delay10us();
+ 101   1        HDCSDA_SET();
+ 102   1        Delay10us();
+ 103   1      }
+ 104          
+ 105          u8 respons(void)
+ 106          {
+ 107   1        u8 i=0,error=0;//?????? WaitACK,?????? SDA
+ 108   1        //HDCSDA_Input();
+ 109   1        Delay10us();
+ 110   1        HDCSCK_SET();
+ 111   1        Delay10us();
+ 112   1        ACK_ret = 0;
+ 113   1        while(((HDCGet_SDA())!=0)&&i<50)i++;
+ 114   1        if(i>45)
+ 115   1        {
+ 116   2          error = 1;
+C51 COMPILER V9.56.0.0   DHTC12                                                            12/22/2021 15:01:57 PAGE 3   
+
+ 117   2          ACK_ret = 1;
+ 118   2        }
+ 119   1        HDCSCK_CLR();//SCK:0 ???? SDA
+ 120   1        Delay10us();
+ 121   1        HDCSDA_Output();
+ 122   1        return error;
+ 123   1      }
+ 124          
+ 125          
+ 126          void SendACK(u8 ack)
+ 127          {
+ 128   1        if(ack == 0)
+ 129   1        {
+ 130   2          HDCSDA_CLR();
+ 131   2        }
+ 132   1        else
+ 133   1        {
+ 134   2          HDCSDA_SET();
+ 135   2        }
+ 136   1        Delay10us();
+ 137   1        HDCSCK_SET();
+ 138   1        Delay10us();
+ 139   1        HDCSCK_CLR();
+ 140   1        Delay10us();
+ 141   1        HDCSDA_SET();
+ 142   1      }
+ 143          
+ 144          
+ 145          void write_byte(u8 date)
+ 146          {
+ 147   1        u8 i,temp;
+ 148   1        temp=date;
+ 149   1        for(i=0;i<8;i++)
+ 150   1        {
+ 151   2          HDCSCK_CLR();
+ 152   2        // delay(10);
+ 153   2          if((temp&0x80)==0x80)
+ 154   2          {
+ 155   3            HDCSDA_SET();
+ 156   3          }
+ 157   2          else
+ 158   2          {
+ 159   3            HDCSDA_CLR();
+ 160   3          }
+ 161   2          Delay10us();
+ 162   2          HDCSCK_SET();
+ 163   2          Delay10us();
+ 164   2          temp=temp<<1;
+ 165   2        }
+ 166   1        HDCSCK_CLR();
+ 167   1        Delay10us();
+ 168   1        // HDCSDA_SET();
+ 169   1        // delay(10);
+ 170   1      }
+ 171          
+ 172          
+ 173          u8 read_byte(void)
+ 174          {
+ 175   1        u8 i,k;
+ 176   1        HDCSDA_SET();//? P ?????
+ 177   1        HDCSDA_Input();
+ 178   1        for(i=0;i<8;i++)
+C51 COMPILER V9.56.0.0   DHTC12                                                            12/22/2021 15:01:57 PAGE 4   
+
+ 179   1        {
+ 180   2          HDCSCK_SET();
+ 181   2          Delay10us();
+ 182   2          k <<= 1;
+ 183   2          if(HDCGet_SDA())//==0x04
+ 184   2            k |= 0x01;
+ 185   2          HDCSCK_CLR();//SCK:0 ???? SDA
+ 186   2          Delay10us();
+ 187   2        }
+ 188   1        HDCSDA_Output();//
+ 189   1        return k;
+ 190   1      }
+ 191          
+ 192          
+ 193          //¶ÁÈ¡¼Ä´æÆ÷Êý¾Ý
+ 194          u16 Read_Rg(u8 AddRg)
+ 195          {
+ 196   1        u8 errRe,ReadDatSH[3];
+ 197   1        u16 ReDat;
+ 198   1        start();
+ 199   1        write_byte(V4_I2C_ADDR<<1);// Add+W
+ 200   1        Delay1us();
+ 201   1        respons();
+ 202   1        write_byte(0xD2);//µ¥×Ö½Ú¶ÁÈ¡¼Ä´æÆ÷ Ö¸Áî D2xx
+ 203   1        respons();
+ 204   1        write_byte(AddRg);
+ 205   1        respons();
+ 206   1        Delay10us();
+ 207   1        start();
+ 208   1        write_byte(V4_I2C_ADDR<<1|0x01);// Add+R
+ 209   1        errRe=respons();
+ 210   1        //if(ACK_ret == 0)
+ 211   1        //{
+ 212   1        ReadDatSH[0] = read_byte();
+ 213   1        SendACK(ACK);
+ 214   1        ReadDatSH[1] = read_byte();
+ 215   1        SendACK(ACK);
+ 216   1        ReadDatSH[2] = read_byte();
+ 217   1        SendACK(NACK);
+ 218   1        //}
+ 219   1        stop();
+ 220   1        errRe = SHT3x_CheckCrc(ReadDatSH,2);
+ 221   1        if(errRe==0)
+ 222   1        {
+ 223   2          ReDat = ReadDatSH[0];
+ 224   2        }else
+ 225   1        {
+ 226   2          ReDat = 0xff;
+ 227   2        }
+ 228   1        return ReDat;
+ 229   1      }
+ 230          
+ 231          //Èí¸´Î»
+ 232          void ResetMD()
+ 233          {
+ 234   1        start();
+ 235   1        write_byte(V4_I2C_ADDR<<1);// Add+W
+ 236   1        Delay1us();
+ 237   1        respons();
+ 238   1        write_byte(0x30);
+ 239   1        respons();
+ 240   1        write_byte(0xA2);
+C51 COMPILER V9.56.0.0   DHTC12                                                            12/22/2021 15:01:57 PAGE 5   
+
+ 241   1        respons();
+ 242   1        stop();
+ 243   1      }
+ 244          
+ 245          
+ 246          
+ 247          static u16 HumA,HumB;
+ 248          
+ 249          
+ 250          void DHTC12_MInit()
+ 251          {
+ 252   1        ResetMD();
+ 253   1        Delay10us(); //10us »òÕß²»ÓÃ
+ 254   1        HumA = Read_Rg(8);
+ 255   1        HumA = (HumA<<8)|Read_Rg(9);
+ 256   1        HumB = Read_Rg(10);
+ 257   1        HumB = (HumB<<8)|Read_Rg(11);
+ 258   1      }
+ 259          
+ 260          
+ 261          
+ 262          //µ¥´Î´¥·¢ÎÂÊª¶È²âÁ¿
+ 263          u8 ReadDHTC12_M(s16 *tem,u16 *Hum)
+ 264          {
+ 265   1        u8 i,errRe,ReadDatSH[6],CalCRC[3],errorflag;
+ 266   1        s16 TemBuf;
+ 267   1        long CapBuf;//s32
+ 268   1        start();
+ 269   1        write_byte(V4_I2C_ADDR<<1);// Add+W
+ 270   1        Delay1us();
+ 271   1        respons();
+ 272   1        write_byte(0x2c);//µ¥×Ö½Ú¶ÁÈ¡¼Ä´æÆ÷  Ö¸Áî D2xx
+ 273   1        respons();
+ 274   1        write_byte(0x10);
+ 275   1        respons();
+ 276   1        stop();
+ 277   1        Delay2ms();//2ms SCL¿ÕÏÐ×îÉÐ¡ 1ms
+ 278   1        for(i=0;i<50;i++)//²éÑ¯5´Î¿´²âÍê½á¹û
+ 279   1        {
+ 280   2          Delay1ms();//1ms
+ 281   2          Delay1ms();
+ 282   2          Delay1ms();
+ 283   2          start();
+ 284   2          write_byte(V4_I2C_ADDR<<1|0x01);// Add+R
+ 285   2          errRe=respons();
+ 286   2            if(errRe ==0)
+ 287   2          break;//²âÁ¿Íê³É
+ 288   2          else
+ 289   2          stop();
+ 290   2        }
+ 291   1        if(errRe == 0)
+ 292   1        {
+ 293   2          ReadDatSH[0] = read_byte();
+ 294   2          SendACK(ACK);
+ 295   2          ReadDatSH[1] = read_byte();
+ 296   2          SendACK(ACK);
+ 297   2          ReadDatSH[2] = read_byte();
+ 298   2          SendACK(ACK);
+ 299   2          ReadDatSH[3] = read_byte();
+ 300   2          SendACK(ACK);
+ 301   2          ReadDatSH[4] = read_byte();
+ 302   2          SendACK(ACK);
+C51 COMPILER V9.56.0.0   DHTC12                                                            12/22/2021 15:01:57 PAGE 6   
+
+ 303   2          ReadDatSH[5] = read_byte();
+ 304   2          SendACK(NACK);
+ 305   2          stop();
+ 306   2        }
+ 307   1        CalCRC[0] = ReadDatSH[0];
+ 308   1        CalCRC[1] = ReadDatSH[1];
+ 309   1        CalCRC[2] = ReadDatSH[2];
+ 310   1        errorflag = SHT3x_CheckCrc(CalCRC,2);
+ 311   1        if(errorflag==0)
+ 312   1        {
+ 313   2          TemBuf = (u16)ReadDatSH[0]<<8|(ReadDatSH[1]);
+ 314   2          TemBuf = 400+TemBuf/25.6;//*10 ½á¹û*10±¶ 286 ¼´ 28.6¡æ
+ 315   2          *tem = TemBuf;
+ 316   2        }
+ 317   1        CalCRC[0] = ReadDatSH[3];
+ 318   1        CalCRC[1] = ReadDatSH[4];
+ 319   1        CalCRC[2] = ReadDatSH[5];
+ 320   1        errorflag |= SHT3x_CheckCrc(CalCRC,2);
+ 321   1        if(errorflag==0)
+ 322   1        {
+ 323   2        CapBuf = (u16)ReadDatSH[3]<<8|(ReadDatSH[4]);
+ 324   2        CapBuf = (CapBuf-HumB)*600/(HumA-HumB)+300;
+ 325   2        //20¡æÎª5¸öÊª¶Èµã  ¼´1¡æÎª0.25¸öÊª¶Èµã  0.1¡æÎª0.025
+ 326   2        CapBuf = CapBuf+ 25*(TemBuf-250)/100;
+ 327   2        if(CapBuf>1000)
+ 328   2          CapBuf = 999;
+ 329   2        else if(CapBuf<0)
+ 330   2          CapBuf = 0;
+ 331   2        *Hum = (u16)CapBuf;//Í¬Ñù½á¹û*10
+ 332   2        }
+ 333   1        return errorflag; 
+ 334   1      }
+ 335          
+ 336          const u16 POLYNOMIAL = 0x131; //P(x)=x^8+x^5+x^4+1 = 100110001
+ 337          
+ 338          u8 SHT3x_CheckCrc(u8 Data[], u8 nbrOfBytes) //¸úSHT30Ò»ÑùÖ»ÊÇ½«CRCÖµµ¹»Øµ½Dataºó·µ»Ø
+ 339          //==============================================================================
+ 340          {
+ 341   1        u8 crc = 0xff; //0
+ 342   1        u8 byteCtr,Bit;
+ 343   1        //calculates 8-Bit checksum with given polynomial
+ 344   1        for (byteCtr = 0; byteCtr < nbrOfBytes; ++byteCtr)
+ 345   1        { crc ^= (Data[byteCtr]);
+ 346   2          for (Bit = 8; Bit > 0; --Bit)
+ 347   2          { if (crc & 0x80) crc = (crc << 1) ^ POLYNOMIAL;
+ 348   3          else crc = (crc << 1);
+ 349   3          }
+ 350   2        }
+ 351   1        if (crc != Data[nbrOfBytes])
+ 352   1        {
+ 353   2        Data[nbrOfBytes] = crc;
+ 354   2        return 0x01;
+ 355   2        }
+ 356   1        else return 0;
+ 357   1      }
+ 358          
+ 359          
+ 360          
+ 361          
+ 362          
+
+
+C51 COMPILER V9.56.0.0   DHTC12                                                            12/22/2021 15:01:57 PAGE 7   
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    878    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      7      32
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

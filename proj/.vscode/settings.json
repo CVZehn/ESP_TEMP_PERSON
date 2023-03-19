@@ -1,0 +1,17 @@
+{
+    "C_Cpp.default.browse.path": [
+        "C:\\Users\\24186\\Documents\\Arduino\\libraries\\painlessMesh\\src"
+    ],
+    "files.associations": {
+        "string_view": "cpp",
+        "cmath": "cpp",
+        "array": "cpp",
+        "deque": "cpp",
+        "string": "cpp",
+        "unordered_map": "cpp",
+        "vector": "cpp",
+        "initializer_list": "cpp",
+        "ranges": "cpp",
+        "pin_iic.h": "c"
+    },
+}
